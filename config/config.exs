@@ -7,6 +7,6 @@ config :advent_of_code_utils,
   time_calls?: true,
   gen_tests?: true,
   year: 2022,
-  day: 6
+  day: 7
 
 config :iex, inspect: [charlists: :as_lists]
