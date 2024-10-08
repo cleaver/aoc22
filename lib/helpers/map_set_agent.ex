@@ -1,5 +1,5 @@
 defmodule MapSetAgent do
-  def start(name \\ __MODULE__), do: Agent.start_link(fn -> %{} end, name: name)
+  def start(name \\ __MODULE__), do: Agent.start_link(fn -> MapSet.new() end, name: name)
 
   def stop(name \\ __MODULE__), do: Agent.stop(name)
 
