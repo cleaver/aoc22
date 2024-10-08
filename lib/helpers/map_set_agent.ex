@@ -3,7 +3,7 @@ defmodule MapSetAgent do
 
   def stop(name \\ __MODULE__), do: Agent.stop(name)
 
-  def set(value, name \\ __MODULE__) do
+  def put(value, name \\ __MODULE__) do
     Agent.update(name, fn state ->
       MapSet.put(state, value)
     end)
