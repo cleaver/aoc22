@@ -22,6 +22,8 @@ defmodule Aoc22.MixProject do
   defp deps do
     [
       {:advent_of_code_utils, "~> 4.0"},
+      {:arrays, "~> 2.1.1"},
+      {:nx, "~> 0.9.1"},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:nimble_parsec, "~> 1.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},
