@@ -5,7 +5,6 @@ aoc 2022, 8 do
   https://adventofcode.com/2022/day/8
   """
   import InputHelpers
-  alias Y2022.D8.ViewHelper
   alias MapSetAgent
   alias Nx
   @tree_agent :tree_agent
@@ -91,97 +90,65 @@ aoc 2022, 8 do
       iex> p2(example_string())
   """
   def p2(input) do
-    map =
+    list_map =
       input
       |> parse_input()
       |> Enum.map(&parse_line/1)
-      |> Nx.tensor()
 
-    _row_views =
-      map
-      |> Nx.vectorize(:rows)
-      |> ViewHelper.view_score()
+    IO.inspect(list_map |> Nx.tensor(), label: "list_map")
+
+    row_views =
+      list_map
+      |> remove_first_and_last()
+      |> Enum.map(&view_score/1)
+      |> Nx.tensor()
+      |> Nx.pad(0, [{1, 1, 0}, {0, 0, 0}])
+
+    col_views =
+      list_map
+      |> Nx.tensor()
+      |> Nx.transpose()
+      |> Nx.to_list()
+      |> remove_first_and_last()
+      |> Enum.map(&view_score/1)
+      |> Nx.tensor()
+      |> Nx.pad(0, [{1, 1, 0}, {0, 0, 0}])
+      |> Nx.transpose()
+
+    Nx.multiply(row_views, col_views)
+    |> Nx.reduce_max()
   end
 
-  defmodule ViewHelper do
-    import Nx.Defn
-    require Nx
-    alias Nx
+  defp remove_first_and_last(list_map), do: Enum.slice(list_map, 1..-2//1)
 
-    defn view_score(tensor) do
-      slice_length =
-        case Nx.shape(tensor) do
-          {length} -> length
-          _ -> raise "invalid shape"
-        end
+  defp view_score(row) do
+    row
+    |> Enum.with_index()
+    |> Enum.map(&view_score_at(&1, row))
+  end
 
-      {_, acc} =
-        while {tensor, acc = Nx.broadcast(0, {slice_length})},
-              index <- 1..(Nx.axis_size(tensor, 0) - 2) do
-          {tensor, tree_view(tensor, index, acc)}
-        end
+  defp view_score_at({_, 0}, _), do: 0
+  defp view_score_at({_, index}, row) when index >= length(row) - 1, do: 0
 
-      acc
-    end
+  defp view_score_at({height, index}, row) do
+    right_score =
+      row
+      |> Enum.slice((index + 1)..-1//1)
+      |> count_visible_trees(height)
 
-    # [1, 2, 3, 4, 5], 1, [0, 0, 0, 0, 0]
-    defn tree_view(tensor, index, acc_vector) do
-      vector_view_product =
-        tensor
-        |> Nx.less(tensor[index])
-        |> view_left_and_right(index)
+    left_score =
+      row
+      |> Enum.reverse()
+      |> Enum.slice((length(row) - index)..-1//1)
+      |> count_visible_trees(height)
 
-      Nx.indexed_put(acc_vector, vector_view_product, index)
-    end
+    right_score * left_score
+  end
 
-    defn view_left_and_right(tensor, index) do
-      {_, _, right_view} =
-        while {tensor, current = index + 1, acc = 1}, test_right(tensor, current) do
-          {tensor, current, acc + 1}
-        end
-
-      {_, _, left_view} =
-        while {tensor, current = index - 1, acc = 1}, test_left(tensor, current) do
-          {tensor, current, acc + 1}
-        end
-
-      left_view * right_view
-    end
-
-    defn test_right(tensor, index) do
-      inspectum("before")
-
-      if Nx.greater_equal(index, Nx.axis_size(tensor, 0) - 1) do
-        inspectum("after")
-        tensor[index]
-      else
-        inspectum("after 0")
-        0
-      end
-    end
-
-    defn test_left(tensor, index) do
-      if Nx.greater_equal(index, 0) do
-        tensor[index]
-      else
-        0
-      end
-    end
-
-    deftransform(inspectum(data, label \\ ""))
-
-    # deftransform inspectum(data, label) when Nx.is_tensor(data) do
-    #   if Nx.shape(data) == {} do
-    #     Nx.to_number(data)
-    #   else
-    #     Nx.to_list(data)
-    #   end
-    #   |> IO.inspect(label: label)
-    # end
-
-    deftransform inspectum(data, label) do
-      IO.inspect(data, label: label)
-    end
+  defp count_visible_trees(trees, height) do
+    Enum.reduce_while(trees, 0, fn tree, acc ->
+      if tree < height, do: {:cont, acc + 1}, else: {:halt, acc + 1}
+    end)
   end
 
   defp parse_line(line) do
